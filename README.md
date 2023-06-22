@@ -1,41 +1,96 @@
 # Using the Surrogate Optimizer
 
-## Before to start
+## Before using Keever
 
 First, you will want to prepare your optimizer and simulation routines.
-Theses scripts schould be placed in the `user` folder.
+Theses scripts should be placed in the `user` folder. 
+You can use local packages that should also be placed in the user folder.
+Other packages should preferably be installed using a virtual environment.
 
-## Writing runnables modules
+## Algorithms and Datasets
 
-You can create conversion scripts to turn databases into input files for your application, for instance, this scripts converts the database from keever (which is a dict) to Konïg's npz input files using functions that are stored in `user/tools/`.
+In Keever, there are two kinds of items you will handle: datasets and algorithms.
+
+### Your first dataset
+
+To create a dataset, you will declare one the field `dataset`. In the following code snippet, we define a dataset named `doe`.
+This dataset has a single array of five real variables defining each design. Parameters range from -0.5 to 0.5.
+We create an additional variable called `metric` to store the figure of merit.
+The final item generates an initial population of `40` designs using the Latin Hypercube Sampling (LHS).
+
+```yaml
+workdir: "./"
+datasets:
+  doe:
+    name: doe
+    variables:
+        - variable:
+          name: r
+          type : vreal
+          lower: -0.5
+          upper: 0.5
+          size: 5
+    storages:
+      - metric
+    populate-on-creation:
+      algo: LHS
+      count: 40
+```
+
+We can load this in python by using. The last line serializes to json the whole dataset.
 
 ```python
-from os.path import join
-from user.tools import metasurface_raw_to_npz, angle_raw_to_npz, annular_raw_to_npz
+import sys
+sys.path.append(".")
+from keever.algorithm import ModelManager
+import yaml
 
-type2converter = {
-    "angles": angle_raw_to_npz,
-    "annular": annular_raw_to_npz,
-    "metasurface": metasurface_raw_to_npz
-}
-
-def __run__(population, workdir="", tmpdir="", type=""):
-    assert(type in type2converter.keys())
-    for indiv, props in population:
-        type2converter[type](props["variables"], join(workdir, indiv + ".in.npz"))
-
-    return {"individual_tag": list(population.keys()) }
-
-def __requires__():
-    return {"variables":["population", "workdir", "type"]}
-
-def __declares__():
-    return ["individual_tag"]
+config = yaml.safe_load(open("example.yaml", "r"))
+mm = ModelManager()
+mm.load_state_dict(config)
+mm.get("doe").save("doe-no-evaluations")
 ```
+
+Now, if we want to perform a dummy optimization, we need a way to compute a figure of merit. For this, we will build an algorithm.
+First, we build a python module in `examples/dummy_evaluation.py` to evaluate a simple figure of merit: the sphere function:
+
+$$
+f(\vec x) = \sum x_i^2.
+$$
+
+```python
+def __requires__():
+    return {"variables": ["x"]}
+
+import numpy as np
+def __run__(x):
+    return np.sum(np.power(x, 2))
+```
+
+We need to register the algorithm in the yaml file:
+```yaml
+algorithms:
+  fom:
+    name: fom
+    actions:
+      evaluate-dummy:
+        __object_type__: ModuleRunner
+        shell: false
+        path: examples.dummy_evaluation
+        workdir: "./wd/"
+```
+
+Once set-up, we can use this module in our main file:
+```python
+result = mm.get("fom").action("evaluate-dummy", args={"x": [10, 10]})
+print(result)
+```
+
+
 
 ## Writing runners for non-python or decoupled codes
 
-If you want to run any code as a job on a cluster, in a different python env or with another language, you should use these runners. Here we define an `algorithm` for the U-Net metamodel.
+If you want to run any code as a job on a cluster, in a different python **virtualenv** or with another language, you should use these runners. Here we define an `algorithm` for the U-Net metamodel.
 
 Under the `actions` item, you will find a single runner to train the network. 
 - It uses **sbatch** as a shell as we work with a slurm job. You can of course replace this with a simple bash launcher script.
@@ -68,9 +123,9 @@ algorithms:
 
 ### Writing a template script
 
-Here is an example for training the U-Net. This is a slurm cluster script. All variables
-to be replaced are placed between double curly brackets. Beware that the touchfile variable is
-generated automatically and serves as a way to detect job completion.
+Here is an example for training the U-Net. This the slurm cluster script `submit_unet.proto.sh` found above. 
+All variables are placed between double curly brackets. Beware that the `touchfile` variable is
+generated automatically. It serves as a generic way to detect job completion, your job should then always create this file upon successful completion.
 
 Note that in some case, i.e. `{{dataset:npz.maps}}` there is a `:` followed by a token. This
 is a custom exporter that you can define for datasets.
@@ -160,3 +215,33 @@ for i in trange(num_sbo_loops):
     mm.get("selected").clear()
 
 ```
+
+## Writing runnables modules
+
+You can create conversion scripts to turn databases into input files for your application, for instance, this scripts converts the database from keever (which is a dict) to Konïg's npz input files using functions that are stored in `user/tools/`.
+
+```python
+from os.path import join
+from user.tools import metasurface_raw_to_npz, angle_raw_to_npz, annular_raw_to_npz
+
+type2converter = {
+    "angles": angle_raw_to_npz,
+    "annular": annular_raw_to_npz,
+    "metasurface": metasurface_raw_to_npz
+}
+
+def __run__(population, workdir="", tmpdir="", type=""):
+    assert(type in type2converter.keys())
+    for indiv, props in population:
+        type2converter[type](props["variables"], join(workdir, indiv + ".in.npz"))
+
+    return {"individual_tag": list(population.keys()) }
+
+def __requires__():
+    return {"variables":["population", "workdir", "type"]}
+
+def __declares__():
+    return ["individual_tag"]
+```
+
+##

@@ -90,18 +90,18 @@ Now we can create a simple optimizer as a python module runner.
 
 ```python
 def __requires__():
-    return {"variables": ["fevals", "nagents"]}
+    return {"variables": ["fevals", "nagents", "fom"]}
 
 import numpy as np
 from hybris.optim import Optimizer
 
 def __run__(fevals, nagents, fom):
-    opt = Optimizer(nagents, [5, 0], fevals)
+    opt = Optimizer(nagents, [5, 0], max_fevals=fevals)
     opt.reset(42)
 
     while not opt.stop():
         x = opt.ask()
-        y = fom.action("evaluate-dummy", args=x)
+        y = fom.action("evaluate-dummy", args={"x": x})
         opt.tell(y)
 
     return opt.profile[-1]

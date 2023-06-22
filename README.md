@@ -83,9 +83,42 @@ algorithms:
 Once set-up, we can use this module in our main file:
 ```python
 result = mm.get("fom").action("evaluate-dummy", args={"x": [10, 10]})
-print(result)
+print(result) # Prints 10**2 + 10**2 = 200
 ```
 
+Now we can create a simple optimizer as a python module runner.
+
+```python
+def __requires__():
+    return {"variables": ["fevals", "nagents"]}
+
+import numpy as np
+from hybris.optim import Optimizer
+
+def __run__(fevals, nagents, fom):
+    opt = Optimizer(nagents, [5, 0], fevals)
+    opt.reset(42)
+
+    while not opt.stop():
+        x = opt.ask()
+        y = fom.action("evaluate-dummy", args=x)
+        opt.tell(y)
+
+    return opt.profile[-1]
+```
+```yaml
+opt:
+  name: opt
+  actions:
+    optimize:
+      __object_type__: ModuleRunner
+      shell: false
+      path: examples.simple_pso
+      workdir: "./wd/"
+  config:
+    fevals: 160
+    nagents: 40
+```
 
 
 ## Writing runners for non-python or decoupled codes

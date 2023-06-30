@@ -1,5 +1,9 @@
 # Using the Surrogate Optimizer
 
+```bash
+pip install 'keever @ git+https://github.com/Kaeryv/Keever'
+```
+
 ## Before using Keever
 
 First, you will want to prepare your optimizer and simulation routines.

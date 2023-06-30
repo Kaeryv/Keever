@@ -120,6 +120,12 @@ opt:
     nagents: 40
 ```
 
+We run the optimizer on the problem using in the main file.
+```python
+best_fitness = mm.get("opt").action("optimize", args={"fom": mm.get("fom")})
+print(best_fitness)
+```
+
 
 ## Writing runners for non-python or decoupled codes
 

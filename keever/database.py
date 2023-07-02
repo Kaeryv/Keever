@@ -43,7 +43,7 @@ class Database:
         self.exporters = data["exporters"] if "exporters" in data else {}
         self._data = { "variables": {} }
         self._data.update({ key: {} for key in data["storages"] } if "storages" in data else {})
-        if "populate-on-creation" in data:
+        if "populate-on-creation" in data.keys() and data["populate-on-creation"]:
             self.populate(data["populate-on-creation"]["algo"], data["populate-on-creation"]["count"])
         return self
     

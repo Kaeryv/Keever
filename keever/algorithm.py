@@ -67,7 +67,7 @@ class Algorithm():
         obj = Algorithm(data["name"])
         obj._workdir = data["workdir"] if "workdir" in data.keys() else None
         obj.actions = { key: load_action(value) for key, value in data["actions"].items()}
-        obj.config = data["config"] if config in data else {}
+        obj.config = data["config"] if "config" in data else {}
         return obj
 
     def export(self, type):

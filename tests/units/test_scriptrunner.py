@@ -1,4 +1,6 @@
 import unittest
+import sys
+sys.path.append("./tests/units/")
 from keever.runners import ScriptRunner, ModuleRunner
 
 class ScriptRunnerBasic(unittest.TestCase):
@@ -9,7 +11,7 @@ class ScriptRunnerBasic(unittest.TestCase):
         assert("test" in result and result["test"] == 42)
 
     def test_launch(self):
-        runner = ModuleRunner("tests.units.resources.test_mod", workdir=".")
+        runner = ModuleRunner("units.resources.test_mod", workdir=".")
         try:
             # This code schould produce exception
             result = runner.run_with_dict({"test": 42})

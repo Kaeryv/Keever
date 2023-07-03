@@ -1,4 +1,4 @@
-workdir: "./"
+workdir: &workdir "./"
 datasets:
   doe:
     name: doe
@@ -16,22 +16,20 @@ datasets:
       count: 40
 
 algorithms:
-  fom:
+  - algorithm: fom
     name: fom
     actions:
-      evaluate-dummy:
-        __object_type__: ModuleRunner
+      - module_runner: evaluate-dummy
         shell: false
         path: examples.eval_sphere
-        workdir: "./wd/"
-  opt:
+        workdir: *workdir
+  - algorithm: opt
     name: opt
     actions:
-      optimize:
-        __object_type__: ModuleRunner
+      - module_runner: optimize
         shell: false
         path: examples.simple_pso_sko
-        workdir: "./wd/"
+        workdir: *workdir
     config:
       fevals: 40000
       nagents: 40

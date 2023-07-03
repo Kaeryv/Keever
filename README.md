@@ -1,3 +1,5 @@
+[![Python package](https://github.com/Kaeryv/Keever/actions/workflows/python-package.yml/badge.svg)](https://github.com/Kaeryv/Keever/actions/workflows/python-package.yml)
+
 # Using the Surrogate Optimizer
 
 ```bash

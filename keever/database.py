@@ -81,7 +81,7 @@ class Database:
                 self.db = db
             def __next__(self):
                 if self.current < len(self.db.entries):
-                    entry = self.entries[self.db.current]
+                    entry = self.db.entries[self.current]
                     self.current += 1
                     return entry, self.db[entry]
                 else:

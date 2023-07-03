@@ -9,10 +9,10 @@ import uuid
 
 def module_checks(module):
     if not hasattr(module, "__run__"):
-        print("[Error][ModuleRunner] Module file has no __run__ function.")
+        print(f"[Error][ModuleRunner] Module file {module.__file__} has no __run__ function.")
         exit()
     if not hasattr(module, "__requires__"):
-        print("[Warning][ModuleRunner] Module file has no __requires__ function, assuming defaults.")
+        print(f"[Warning][ModuleRunner] Module file {module.__file__} has no __requires__ function, assuming defaults.")
 
 def ensure_arguments_match(required, provided):
     r = set(required)
@@ -32,14 +32,23 @@ def ensure_arguments_match(required, provided):
             print(f" - {e}")
 
 
-
+action_types = ["module_runner", "script_runner", "sequence_runner"]
 def load_action(data):
-    if data["__object_type__"] == "ModuleRunner":
-        return ModuleRunner.from_json(data)
-    elif data["__object_type__"] == "ScriptRunner":
-        return ScriptRunner.from_json(data)
-    elif data["__object_type__"] == "SequenceRunner":
-        return SequenceRunner.from_json(data)
+    for at in action_types:
+        if at in data.keys():
+            if at == "module_runner":
+                return data[at], ModuleRunner.from_json(data)
+            elif at == "script_runner":
+                return data[at], ScriptRunner.from_json(data)
+            elif at == "sequence_runner":
+                return data[at], SequenceRunner.from_json(data)
+
+def load_action_list(data):
+    actions = {}
+    for action in data:
+        key, value = load_action(action)
+        actions.update({ key: value })
+    return actions
 
 def wait_files(files, sleep_time=60):
     while True:
@@ -96,7 +105,7 @@ class SequenceRunner:
 
     @classmethod
     def from_json(cls, data):
-        return cls({ key: load_action(value) for key, value in data["actions"].items()})
+        return cls(load_action_list(data["actions"]))
 
     def run_with_dict(self, dictionnary: dict):
         conf = copy(dictionnary)
@@ -104,7 +113,8 @@ class SequenceRunner:
         for action in self.actions.values():
             vars = {key: conf[key] for key in action.requirements["variables"] if key in conf}
             returns = action.run_with_dict(vars)
-            conf.update(returns)
+            if returns:
+                conf.update(returns) 
         return conf
 
 class ModuleRunner():

@@ -1,7 +1,7 @@
 import os
 from copy import deepcopy
 import json
-from .runners import load_action
+from .runners import load_action, load_action_list
 from .database import Database
 
 class ModelManager:
@@ -15,7 +15,7 @@ class ModelManager:
             for name, content in state["datasets"].items():
                 self.add(Database.from_json(content))
         if "algorithms" in state.keys():
-            for name, content in state["algorithms"].items():
+            for content in state["algorithms"]:
                 self.add(Algorithm.from_json(content))
 
     def add(self, obj):
@@ -48,7 +48,7 @@ class Algorithm():
 
     def reload(self):
         for key, action in self.actions.items():
-            self.actions[key] = load_action(action.state_dict)
+            _, self.actions[key] = load_action(action.state_dict)
         return self
         
     def action(self, name, args={}):
@@ -64,9 +64,10 @@ class Algorithm():
     
     @classmethod
     def from_json(cls, data):
-        obj = Algorithm(data["name"])
+        assert("algorithm" in data.keys())
+        obj = Algorithm(data["algorithm"])
         obj._workdir = data["workdir"] if "workdir" in data.keys() else None
-        obj.actions = { key: load_action(value) for key, value in data["actions"].items()}
+        obj.actions.update(load_action_list(data["actions"]))
         obj.config = data["config"] if "config" in data else {}
         return obj
 

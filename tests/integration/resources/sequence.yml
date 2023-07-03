@@ -1,0 +1,15 @@
+workdir: "./"
+algorithms:
+  - algorithm: sequence
+    actions:
+      - sequence_runner: test
+        actions:
+          - module_runner: test_a
+            shell: false
+            path: tests.integration.sequence_test_a
+            workdir: "./wd"
+          - module_runner: test_b
+            shell: false
+            path: tests.integration.sequence_test_b
+            workdir: "./wd"
+

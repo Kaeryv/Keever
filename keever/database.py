@@ -40,9 +40,10 @@ class Database:
     def load_state_dict(self, data):
         self.name = data["name"]
         self.variables_descr = data["variables"] if "variables" in data else {}
+        self.storage_descr   = data["storage"]   if "storages"  in data else []
         self.exporters = data["exporters"] if "exporters" in data else {}
         self._data = { "variables": {} }
-        self._data.update({ key: {} for key in data["storages"] } if "storages" in data else {})
+        self._data.update({ key: {} for key in self.storage_descr })
         if "populate-on-creation" in data.keys() and data["populate-on-creation"]:
             self.populate(data["populate-on-creation"]["algo"], data["populate-on-creation"]["count"])
         return self
@@ -113,8 +114,8 @@ class Database:
             self._data[key].update(lhs._data[key])
 
     def update_entry(self, name, dictionnary):
-        assert(key in self.storage_descr)
         for key in dictionnary.keys():
+            assert(key in self.storage_descr, f"Key {key} is not allowed in storage.")
             self._data[key][name] = dictionnary[key]
 
     def update_entries(self, entries, dictionnary):

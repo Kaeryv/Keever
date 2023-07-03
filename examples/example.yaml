@@ -1,0 +1,37 @@
+workdir: "./"
+datasets:
+  doe:
+    name: doe
+    variables:
+        - variable:
+          name: r
+          type : vreal
+          lower: -0.5
+          upper: 0.5
+          size: 5
+    storages:
+      - metric
+    populate-on-creation:
+      algo: LHS
+      count: 40
+
+algorithms:
+  fom:
+    name: fom
+    actions:
+      evaluate-dummy:
+        __object_type__: ModuleRunner
+        shell: false
+        path: examples.eval_sphere
+        workdir: "./wd/"
+  opt:
+    name: opt
+    actions:
+      optimize:
+        __object_type__: ModuleRunner
+        shell: false
+        path: examples.simple_pso_sko
+        workdir: "./wd/"
+    config:
+      fevals: 40000
+      nagents: 40

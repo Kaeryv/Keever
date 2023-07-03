@@ -113,6 +113,7 @@ class Database:
             self._data[key].update(lhs._data[key])
 
     def update_entry(self, name, dictionnary):
+        assert(key in self.storage_descr)
         for key in dictionnary.keys():
             self._data[key][name] = dictionnary[key]
 
@@ -135,7 +136,6 @@ class Database:
     @property
     def num_scalar_variables(self):
         return count_continuous_variables(self.variables_descr)
-
 
     def assert_empty(self):
         for key in self._data.keys():

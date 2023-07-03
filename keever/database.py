@@ -40,7 +40,7 @@ class Database:
     def load_state_dict(self, data):
         self.name = data["name"]
         self.variables_descr = data["variables"] if "variables" in data else {}
-        self.storage_descr   = data["storage"]   if "storages"  in data else []
+        self.storage_descr   = data["storages"]   if "storages"  in data else []
         self.exporters = data["exporters"] if "exporters" in data else {}
         self._data = { "variables": {} }
         self._data.update({ key: {} for key in self.storage_descr })

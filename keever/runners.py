@@ -158,7 +158,7 @@ class ModuleRunner():
 
     @property
     def state_dict(self):
-        return {"path": self.name, "__object_type__": "ModuleRunner", "workdir": "./wd/" }
+        return {"path": self.name, "algorithm": "module_runner", "workdir": "./wd/" }
 
     @classmethod
     def from_json(cls, data):

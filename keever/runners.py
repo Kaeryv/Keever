@@ -34,21 +34,19 @@ def ensure_arguments_match(required, provided):
 
 action_types = ["module_runner", "script_runner", "sequence_runner"]
 def load_action(data):
-    for at in action_types:
-        if at in data.keys():
-            if at == "module_runner":
-                return data[at], ModuleRunner.from_json(data)
-            elif at == "script_runner":
-                return data[at], ScriptRunner.from_json(data)
-            elif at == "sequence_runner":
-                return data[at], SequenceRunner.from_json(data)
+    at = data["type"]
+    assert(at in action_types)
+    if at == "module_runner":
+        return ModuleRunner.from_json(data)
+    elif at == "script_runner":
+        return ScriptRunner.from_json(data)
+    elif at == "sequence_runner":
+        return SequenceRunner.from_json(data)
+    else:
+        print(f"Unknown runner type: {at}.")
 
 def load_action_list(data):
-    actions = {}
-    for action in data:
-        key, value = load_action(action)
-        actions.update({ key: value })
-    return actions
+    return dict([(action["name"], load_action(action)) for action in data])
 
 def wait_files(files, sleep_time=60):
     while True:

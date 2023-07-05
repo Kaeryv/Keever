@@ -12,8 +12,8 @@ class ModelManager:
     def load_state_dict(self, state):
         self._workdir = state["workdir"]
         if "datasets" in state.keys():
-            for name, content in state["datasets"].items():
-                self.add(Database.from_json(content))
+            for db in state["datasets"]:
+                self.add(Database.from_json(db))
         if "algorithms" in state.keys():
             for content in state["algorithms"]:
                 self.add(Algorithm.from_json(content))
@@ -64,8 +64,7 @@ class Algorithm():
     
     @classmethod
     def from_json(cls, data):
-        assert("algorithm" in data.keys())
-        obj = Algorithm(data["algorithm"])
+        obj = Algorithm(data["name"])
         obj._workdir = data["workdir"] if "workdir" in data.keys() else None
         obj.actions.update(load_action_list(data["actions"]))
         obj.config = data["config"] if "config" in data else {}

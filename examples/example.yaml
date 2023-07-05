@@ -1,14 +1,12 @@
 workdir: &workdir "./"
 datasets:
-  doe:
-    name: doe
+  - name: doe
     variables:
-        - variable:
-          name: r
-          type : vreal
-          lower: -0.5
-          upper: 0.5
-          size: 5
+      - name: r
+        type : vreal
+        lower: -0.5
+        upper: 0.5
+        size: 5
     storages:
       - metric
     populate-on-creation:
@@ -16,17 +14,17 @@ datasets:
       count: 40
 
 algorithms:
-  - algorithm: fom
-    name: fom
+  - name: fom
     actions:
-      - module_runner: evaluate-dummy
+      - name: evaluate-dummy
+        type: module_runner
         shell: false
         path: examples.eval_sphere
         workdir: *workdir
-  - algorithm: opt
-    name: opt
+  - name: opt
     actions:
-      - module_runner: optimize
+      - name: optimize
+        type: module_runner
         shell: false
         path: examples.simple_pso_sko
         workdir: *workdir

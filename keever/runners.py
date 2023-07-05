@@ -99,7 +99,7 @@ class SequenceRunner:
 
     @property
     def state_dict(self):
-        return {"__object_type__": "SequenceRunner","actions": { key: value.state_dict for key, value in self.actions.items()}}
+        return {"type": "sequence_runner","actions": { key: value.state_dict for key, value in self.actions.items()}}
 
     @classmethod
     def from_json(cls, data):
@@ -156,7 +156,7 @@ class ModuleRunner():
 
     @property
     def state_dict(self):
-        return {"path": self.name, "algorithm": "module_runner", "workdir": "./wd/" }
+        return {"path": self.name, "type": "module_runner", "workdir": "./wd/" }
 
     @classmethod
     def from_json(cls, data):
@@ -263,7 +263,7 @@ class ScriptRunner:
     
     @property
     def state_dict(self):
-        return {"__object_type__": "ScriptRunner", "path": self.path, "content": self.content, "workdir":self.workdir, "shell":self.shell, "_required_variables": {key: val.state_dict for key,val in self._required_variables.items()}, "parallel":self.parallel  }
+        return {"type": "script_runner", "path": self.path, "content": self.content, "workdir":self.workdir, "shell":self.shell, "_required_variables": {key: val.state_dict for key,val in self._required_variables.items()}, "parallel":self.parallel  }
 
 
     @classmethod

@@ -48,7 +48,7 @@ class Algorithm():
 
     def reload(self):
         for key, action in self.actions.items():
-            _, self.actions[key] = load_action(action.state_dict)
+            self.actions[key] = load_action(action.state_dict)
         return self
         
     def action(self, name, args={}):

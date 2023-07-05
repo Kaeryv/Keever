@@ -167,7 +167,7 @@ class ModuleRunner():
         return list(self._required_variables.keys())
 
 class ScriptRunner:
-    def __init__(self, path, shell="bash", parallel=False, workdir=".") -> None:
+    def __init__(self, name, path, shell="bash", parallel=False, workdir=".") -> None:
         self.path = path
         self.shell = shell
         self.content = ""
@@ -175,6 +175,7 @@ class ScriptRunner:
         self.build_from_script(path)
         self.parallel = parallel
         self._workdir = workdir
+        self.name = name
 
     @property
     def workdir(self):
@@ -263,12 +264,12 @@ class ScriptRunner:
     
     @property
     def state_dict(self):
-        return {"type": "script_runner", "path": self.path, "content": self.content, "workdir":self.workdir, "shell":self.shell, "_required_variables": {key: val.state_dict for key,val in self._required_variables.items()}, "parallel":self.parallel  }
+        return {"name": self.name, "type": "script_runner", "path": self.path, "content": self.content, "workdir":self.workdir, "shell":self.shell, "_required_variables": {key: val.state_dict for key,val in self._required_variables.items()}, "parallel":self.parallel  }
 
 
     @classmethod
     def from_json(cls, data):
-        return cls(data["path"], data["shell"], data["parallel"], workdir=data["workdir"])
+        return cls(data["name"], data["path"], data["shell"], data["parallel"], workdir=data["workdir"])
 def generate_job(current, dictionnary, launch=False, shell="bash"):
     for key, value in dictionnary.items():
         current = current.replace(f'{{{{{key}}}}}', str(value))

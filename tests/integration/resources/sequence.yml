@@ -1,14 +1,17 @@
 workdir: "./"
 algorithms:
-  - algorithm: sequence
+  - name: sequence
     actions:
-      - sequence_runner: test
+      - type: sequence_runner
+        name: test
         actions:
-          - module_runner: test_a
+          - type: module_runner
+            name: test_a
             shell: false
             path: tests.integration.sequence_test_a
             workdir: "./wd"
-          - module_runner: test_b
+          - type: module_runner
+            name: test_b
             shell: false
             path: tests.integration.sequence_test_b
             workdir: "./wd"

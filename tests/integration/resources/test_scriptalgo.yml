@@ -1,0 +1,10 @@
+workdir: "./"
+algorithms:
+  - name: algo
+    actions:
+      - type: script_runner
+        name: run
+        shell: bash
+        parallel: false
+        path: tests/integration/resources/script.proto.sh
+        workdir: "./wd"

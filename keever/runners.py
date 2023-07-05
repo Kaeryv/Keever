@@ -118,10 +118,11 @@ class SequenceRunner:
         return conf
 
 class ModuleRunner():
-    def __init__(self, name, workdir=".") -> None:
-        self.m = load_module(name)
+    def __init__(self, name, path, workdir=".") -> None:
+        self.m = load_module(path)
         module_checks(self.m)
         self.name = name
+        self.path = path
         self._required_variables = dict()
         self._workdir = workdir
 
@@ -158,11 +159,11 @@ class ModuleRunner():
 
     @property
     def state_dict(self):
-        return {"path": self.name, "type": "module_runner", "workdir": "./wd/" }
+        return {"name": self.name, "path": self.path, "type": "module_runner", "workdir": "./wd/" }
 
     @classmethod
     def from_json(cls, data):
-        return cls(data["path"], workdir=data["workdir"])
+        return cls(data["name"], data["path"], workdir=data["workdir"])
 
     @property
     def variables(self):

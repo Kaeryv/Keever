@@ -44,6 +44,7 @@ def load_action(data):
         return SequenceRunner.from_json(data)
     else:
         print(f"Unknown runner type: {at}.")
+        exit()
 
 def load_action_list(data):
     return dict([(action["name"], load_action(action)) for action in data])
@@ -93,17 +94,18 @@ def load_module(module):
 
 from copy import copy
 class SequenceRunner:
-    def __init__(self, actions=[]) -> None:
+    def __init__(self, name, actions=[]) -> None:
         self.actions = actions
         self.global_variables = []
+        self.name = name
 
     @property
     def state_dict(self):
-        return {"type": "sequence_runner","actions": [ value.state_dict for value in self.actions.values() ]}
+        return {"name": self.name, "type": "sequence_runner","actions": [ value.state_dict for value in self.actions.values() ]}
 
     @classmethod
     def from_json(cls, data):
-        return cls(load_action_list(data["actions"]))
+        return cls(data["name"], load_action_list(data["actions"]))
 
     def run_with_dict(self, dictionnary: dict):
         conf = copy(dictionnary)

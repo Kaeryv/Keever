@@ -11,7 +11,7 @@ class ScriptRunnerBasic(unittest.TestCase):
         assert("test" in result and result["test"] == 42)
 
     def test_launch_module(self):
-        runner = ModuleRunner("resources.dummy_mod", workdir=".")
+        runner = ModuleRunner("dummy_mod", "resources.dummy_mod", workdir=".")
         try:
             # This code schould produce exception
             result = runner.run_with_dict({"test": 42})

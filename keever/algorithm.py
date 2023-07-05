@@ -60,7 +60,7 @@ class Algorithm():
     
     @property
     def state_dict(self):
-        return {"actions": {key: value.state_dict for key,value in self.actions.items() }, "config": self.config, "workdir": self.workdir, "name": self.name}
+        return {"actions": {value.state_dict for value in self.actions.values() }, "config": self.config, "workdir": self.workdir, "name": self.name}
     
     @classmethod
     def from_json(cls, data):

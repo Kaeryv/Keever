@@ -99,7 +99,7 @@ class SequenceRunner:
 
     @property
     def state_dict(self):
-        return {"type": "sequence_runner","actions": { key: value.state_dict for key, value in self.actions.items()}}
+        return {"type": "sequence_runner","actions": { value.state_dict for value in self.actions.values()}}
 
     @classmethod
     def from_json(cls, data):

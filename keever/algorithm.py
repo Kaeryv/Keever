@@ -3,8 +3,12 @@ from copy import deepcopy
 import json
 from .runners import load_action, load_action_list
 from .database import Database
+from attrs import define
 
+@define
 class ModelManager:
+    items: dict
+    _workdir: str
     def __init__(self, workdir=".") -> None:
         self.items = {}
         self._workdir = workdir
@@ -29,12 +33,20 @@ class ModelManager:
 
 from os.path import join
 
+@define
 class Algorithm():
-    def __init__(self, name, actions={}, config={}) -> None:
-        self.actions = actions
-        self.config = config
+    actions: dict
+    config: dict
+    _workdir: str
+    name: str
+    def __init__(self, name) -> None:
+        self.actions = {}
+        self.config = {}
         self._workdir = "."
         self.name = name
+
+    def __repr__(self) -> str:
+        return f"Algorithm {self.name} with {len(self.actions)} actions."
 
     @property
     def workdir(self):
@@ -64,7 +76,7 @@ class Algorithm():
     
     @classmethod
     def from_json(cls, data):
-        obj = Algorithm(data["name"])
+        obj = cls(data["name"])
         obj._workdir = data["workdir"] if "workdir" in data.keys() else None
         obj.actions.update(load_action_list(data["actions"]))
         obj.config = data["config"] if "config" in data else {}

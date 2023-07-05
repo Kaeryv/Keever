@@ -3,4 +3,5 @@ numpy
 scipy
 pyyaml
 scikit-opt
+attrs
 # torch

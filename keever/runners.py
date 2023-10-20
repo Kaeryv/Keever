@@ -231,6 +231,8 @@ class ScriptRunner:
                 src_dictionnary[metavar.src] = " ".join(map(str, value))
             else:
                 src_dictionnary[metavar.src] = value
+        
+        script_files = list()
         if self.array:
             logging.debug("Running array job.")
             touchfiles = list()
@@ -244,16 +246,19 @@ class ScriptRunner:
                     metavar = self._required_variables[name]
                     src_dictionnary[metavar.src] = dictionnary[metavar.name].replace(name, f"{name}.{i}.")
                 ensure_arguments_match(self.variables, dictionnary.keys())
-                generate_job(self.content, src_dictionnary, launch=True, shell=self.shell, name=self.path)
+                script_files.append(generate_job(self.content, src_dictionnary, launch=True, shell=self.shell, name=self.path))
                 touchfiles.append(src_dictionnary["touchfile"])
                 [ returns[name].append(src_dictionnary[self._required_variables[name].src]) for name in self.declares]
             wait_files(touchfiles, sleep_time=10)
 
         else:
             ensure_arguments_match(self.variables, dictionnary.keys())
-            generate_job(self.content, src_dictionnary, launch=True, shell=self.shell, name=self.path)
+            script_files.append(generate_job(self.content, src_dictionnary, launch=True, shell=self.shell, name=self.path))
             wait_files([src_dictionnary["touchfile"]],sleep_time=10)
             returns = { var: dictionnary[var] for var in self.declares }
+        
+        for file in script_files:
+            os.remove(file)
 
         return returns
 
@@ -293,6 +298,7 @@ def generate_job(prototype, dictionnary, launch=False, shell="bash", name="./sub
     for key, value in dictionnary.items():
         completed_script = completed_script.replace(f'{{{{{key}}}}}', str(value))
 
+    
     if launch:
         logging.debug("Launching job")
         os.makedirs("./tmp/", exist_ok=True)
@@ -302,5 +308,6 @@ def generate_job(prototype, dictionnary, launch=False, shell="bash", name="./sub
         with open(script_name, "w") as f2:
             f2.write(completed_script)
         subprocess.call([shell, script_name], shell=False)
-    
-    return completed_script  
+        return script_name
+    else:
+        return completed_script  

@@ -108,10 +108,6 @@ class Database:
         ''' Returns the number of individuals in the database '''
         return len(self.entries)
     
-
-
-
-    
     def clear(self):
         for key in self._data.keys():
             self._data[key].clear()

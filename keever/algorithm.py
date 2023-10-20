@@ -3,47 +3,49 @@ from copy import deepcopy
 import json
 from .runners import load_action, load_action_list
 from .database import Database
-from attrs import define
+from .tools import serialize_json
+from attrs import define, field, Factory
+
 
 @define
 class ModelManager:
-    items: dict
-    _workdir: str
-    def __init__(self, workdir=".") -> None:
-        self.items = {}
-        self._workdir = workdir
+    items:       dict = field(init=False, default=Factory(dict))
+    _workdir:    str = field(init=False, default=".")
 
-    def load_state_dict(self, state):
-        self._workdir = state["workdir"]
-        if "datasets" in state.keys():
-            for db in state["datasets"]:
-                self.add(Database.from_json(db))
-        if "algorithms" in state.keys():
-            for content in state["algorithms"]:
-                self.add(Algorithm.from_json(content))
+    def load_state_dict(self, state_dict):
+        self._workdir = state_dict["workdir"] if "workdir" in state_dict.keys() else "."
+        for e in state_dict["items"]:
+            if e["type"] == "Database":
+                self.add(Database.from_json(e))
+            elif e["type"] == "Algorithm":
+                self.add(Algorithm.from_json(e))
 
     def add(self, obj):
         self.items[obj.name] = obj
-        obj.workdir = self._workdir
+        if hasattr(obj, "workdir"):
+            obj.workdir = self._workdir
         return self.items[obj.name]
 
     def get(self, key):
         return self.items[key]
-        
+    
+    @property    
+    def state_dict(self):
+        return {"items": [ item.state_dict for item in self.items.values()], "_workdir": self._workdir }
+
+    def save(self, filename):
+        serialize_json(self.state_dict, filename)
+
+
 
 from os.path import join
 
 @define
 class Algorithm():
-    actions: dict
-    config: dict
-    _workdir: str
-    name: str
-    def __init__(self, name) -> None:
-        self.actions = {}
-        self.config = {}
-        self._workdir = "."
-        self.name = name
+    actions: dict = field(init=False, default=Factory(dict))
+    config:  dict = field(init=False, default=Factory(dict))
+    _workdir: str = field(init=False, default=".")
+    name:     str = field(init=True)
 
     def __repr__(self) -> str:
         return f"Algorithm {self.name} with {len(self.actions)} actions."
@@ -72,7 +74,7 @@ class Algorithm():
     
     @property
     def state_dict(self):
-        return {"actions": [value.state_dict for value in self.actions.values() ], "config": self.config, "workdir": self.workdir, "name": self.name}
+        return {"actions": [value.state_dict for value in self.actions.values() ], "config": self.config, "workdir": self.workdir, "name": self.name, "type": "Algorithm"}
     
     @classmethod
     def from_json(cls, data):

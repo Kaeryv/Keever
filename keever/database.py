@@ -3,6 +3,11 @@ import numpy as np
 from scipy.stats.qmc import LatinHypercube
 import os
 from keever.tools import serialize_json
+from copy import copy
+from keever import TMPDIR 
+from os.path import join
+
+import logging
 
 def count_continuous_variables(variables_description):
     count = 0
@@ -33,48 +38,9 @@ class Database:
         self.storage_descr = storages
         self._data = { key: {} for key in storages}
         self._data.update({"variables": {}})
-        self._workdir = "."
         self.exporters = {}
         self.name = name
 
-    def load_state_dict(self, data):
-        self.name = data["name"]
-        self.variables_descr = data["variables"] if "variables" in data else {}
-        self.storage_descr   = data["storages"]   if "storages"  in data else []
-        self.exporters = data["exporters"] if "exporters" in data else {}
-        self._data = { "variables": {} }
-        self._data.update({ key: {} for key in self.storage_descr })
-        if "populate-on-creation" in data.keys() and data["populate-on-creation"]:
-            self.populate(data["populate-on-creation"]["algo"], data["populate-on-creation"]["count"])
-        return self
-    
-    @property
-    def entries(self):
-        return list(self._data["variables"].keys())
-    @property
-    def state_dict(self, include_data=True):
-        ret = {
-            "storage": self.storage_descr,
-            "workdir": self.workdir,
-            "exporters": self.exporters,
-            "name": self.name,
-            "variables": self.variables_descr
-        }
-        if include_data:
-            ret.update({"_data": self._data})
-        return ret
-    
-    def save(self, path):
-        serialize_json(self.state_dict, path)
-        return self
-    
-    @classmethod
-    def from_json(cls, data):
-        return cls().load_state_dict(data)
-    
-    def __len__(self):
-        return len(self._data["variables"])
-    
     def __iter__(self):
         class DatabaseIterator:
             def __init__(self, db) -> None:
@@ -90,21 +56,66 @@ class Database:
         
         return DatabaseIterator(self)
 
-
-
     @property
-    def workdir(self):
-        return self._workdir
+    def state_dict(self, include_data=True):
+        '''
+            Produces a dict serialization of the Database.
+        '''
+        ret = {
+            "storage":      self.storage_descr,
+            "exporters":    self.exporters,
+            "name":         self.name,
+            "type":         "Database",
+            "variables":    self.variables_descr # @TODO Should be moved outside soon
+        }
+        if include_data:
+            ret.update({"_data": self._data})
+        return ret
+
+    def load_state_dict(self, state_dict):
+        self.name = state_dict["name"]
+        self.variables_descr = state_dict["variables"] if "variables" in state_dict else {}
+        self.storage_descr   = state_dict["storages"]   if "storages"  in state_dict else []
+        self.exporters = state_dict["exporters"] if "exporters" in state_dict else {}
+        self._data = { "variables": {} }
+        self._data.update({ key: {} for key in self.storage_descr })
+
+        if "_data" in state_dict.keys():
+            self._data.update(state_dict["_data"])
+
+        # @TODO This should go away with variables descr
+        if "populate-on-creation" in state_dict.keys() and state_dict["populate-on-creation"]:
+            self.populate(state_dict["populate-on-creation"]["algo"], state_dict["populate-on-creation"]["count"])
+        return self
+
+    @classmethod
+    def from_json(cls, data):
+        return cls().load_state_dict(data)
+    
+    @property
+    def entries(self):
+        '''
+            Returns the unique identifiers of all individuals
+            @TODO I want to remove the 'magic and always present' variables key by something more robust.
+        '''
+        return list(self._data["variables"].keys())
+    
+    def save(self, path):
+        serialize_json(self.state_dict, path)
+        return self
+    
+    def __len__(self):
+        ''' Returns the number of individuals in the database '''
+        return len(self.entries)
+    
+
+
+
     
     def clear(self):
         for key in self._data.keys():
             self._data[key].clear()
     
-    @workdir.setter
-    def workdir(self, value):
-        self._workdir = value
-        os.makedirs(value, exist_ok=True)
-
     def add_entry(self, name, dictionnary):
         for key in dictionnary.keys():
             self._data[key][name] = dictionnary[key]
@@ -126,16 +137,23 @@ class Database:
     def __getitem__(self, key):
         return { k: self._data[k][key] for k in self._data.keys() if key in self._data[k] }
     
-    def store_in_file(self, path, keys):
-        tmp = { key: np.asarray([ self._data[key][entity] for entity in self._data[key].keys() ]) for key in keys }
-        np.savez_compressed(path, **tmp)
+    def store_in_file(self, path, method, keys):
+        payload = { key: np.asarray([ self._data[key][entity] for entity in self._data[key].keys() ]) for key in keys }
+        if method == "npz":
+            np.savez_compressed(path, **payload)
+        else:
+            logging.error("Unsupported export format")
 
-    def export(self,type):
-        self.store_in_file(self._workdir + "/db.npz", self.exporters[type])
-        return self._workdir + "/db.npz"
+    def export(self, exporter):
+        ''' Used for exporting Database keys to any file format '''
+        export_format, export_name = exporter.split(".")
+        export_filename = join(TMPDIR, f"{self.name}.dbexport.{str(uuid.uuid1())[:5]}.{export_format}")
+        self.store_in_file(export_filename, export_format, self.exporters[exporter])
+        return export_filename
 
     @property
     def num_scalar_variables(self):
+        ''' @TODO Remove '''
         return count_continuous_variables(self.variables_descr)
 
     def assert_empty(self):
@@ -144,7 +162,7 @@ class Database:
         return self
 
     def populate(self, algorithm, count):
-        print(f"populating with {algorithm} {count} individuals.")
+        logging.debug(f"populating with {algorithm} {count} individuals.")
         sampler = LatinHypercube(d=self.num_scalar_variables)
         configs = sampler.random(n=count)
         bounds = countinuous_variables_boundaries(self.variables_descr)
@@ -152,11 +170,13 @@ class Database:
         configs += bounds[0]
         for conf in configs:
             individual_name = str(uuid.uuid1())
+            logging.debug(f"Adding individual {individual_name}.")
             self.add_entry(individual_name, {"variables": conf})
+        logging.info("Finished populating.")
 
         
     def same_variables(self, lhs):
-        self.variables_descr = lhs.variables_descr
+        self.variables_descr = copy(lhs.variables_descr)
 
     def append_npz_keys(self, file, keys):
         d = np.load(file)

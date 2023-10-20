@@ -7,6 +7,8 @@ from os.path import join
 import json
 from json import JSONEncoder
 
+import uuid
+
 import numpy as np 
 
 def ensure_file_directory_exists(file):
@@ -32,3 +34,9 @@ def serialize_json(object: Any, path: AnyStr):
     path = path if path.endswith('.json') else path + ".json"
     with open(path, "w") as f:
         return json.dump(object, f, cls=NumpyArrayEncoder)
+
+def randid(length=None):
+    if length:
+        return str(uuid.uuid1())[:length]
+    else:
+        return str(uuid.uuid1())

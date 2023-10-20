@@ -1,6 +1,7 @@
 workdir: "./"
-algorithms:
+items:
   - name: sequence
+    type: Algorithm
     actions:
       - type: sequence_runner
         name: test

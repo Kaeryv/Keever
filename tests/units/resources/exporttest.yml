@@ -1,0 +1,19 @@
+workdir: "./wd"
+var1: &variables
+  - name: x
+    type: vreal
+    lower: -1.0
+    upper:  1.0
+    size: 10
+
+items:
+  - name: pop
+    type: Database
+    storages:
+      - metric
+    variables: *variables
+    exporters:
+      npz.variables: [ "variables" ]
+    populate-on-creation:
+      algo: LHS
+      count: 25

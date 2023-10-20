@@ -2,34 +2,38 @@ import subprocess
 import re
 import os
 import sys
-from os.path import isfile
+from os.path import isfile, join
 from os import remove
 from time import sleep
-import uuid
+from keever.tools import randid
+import logging
+from copy import copy
+
+from keever import TMPDIR
 
 def module_checks(module):
     if not hasattr(module, "__run__"):
-        print(f"[Error][ModuleRunner] Module file {module.__file__} has no __run__ function.")
+        logging.critical(f"[Error][ModuleRunner] Module file {module.__file__} has no __run__ function.")
         exit()
     if not hasattr(module, "__requires__"):
-        print(f"[Warning][ModuleRunner] Module file {module.__file__} has no __requires__ function, assuming defaults.")
+        logging.warning(f"[Warning][ModuleRunner] Module file {module.__file__} has no __requires__ function, assuming defaults.")
 
 def ensure_arguments_match(required, provided):
     r = set(required)
     p = set(provided)
 
     if not r.issubset(p):
-        print("Error: Not enough arguments.")
-        print("List of missing arguments:")
+        logging.critical("Error: Not enough arguments.")
+        logging.error("List of missing arguments:")
         missing = r.difference(p)
         for m in missing:
-            print(f" - {m}")
+            logging.error(f" - {m}")
         exit()
     if r.issubset(p) and r != p:
-        print("Excess arguments will be ignored:")
+        logging.warning("Excess arguments will be ignored:")
         excess = p.difference(r)
         for e in excess:
-            print(f" - {e}")
+            logging.warning(f" - {e}")
 
 
 action_types = ["module_runner", "script_runner", "sequence_runner"]
@@ -50,6 +54,7 @@ def load_action_list(data):
     return dict([(action["name"], load_action(action)) for action in data])
 
 def wait_files(files, sleep_time=60):
+    logging.info("Waiting for touchfiles.")
     while True:
         all_files_present = True
         for file in files:
@@ -125,14 +130,6 @@ class ModuleRunner():
         self.path = path
         self._required_variables = dict()
         self._workdir = workdir
-
-    @property
-    def workdir(self):
-        return self._workdir
-    @workdir.setter
-    def workdir(self, value):
-        self._workdir = value
-        os.makedirs(value, exist_ok=True)
         
         variables = []
         if hasattr(self.m, "__requires__"):
@@ -142,10 +139,20 @@ class ModuleRunner():
             newvar = RunnerVariable(req)
             self._required_variables[newvar.name] = newvar
 
+    @property
+    def workdir(self):
+        return self._workdir
+    @workdir.setter
+    def workdir(self, value):
+        self._workdir = value
+        os.makedirs(value, exist_ok=True)
+        
+        
+
     def run_with_dict(self, dictionnary: dict):
         for key in dictionnary.keys():
             if not key in self._required_variables:
-                print(f"[Warning][ModuleRunner] variable '{key}' was not in requirements.")
+                logging.warning(f"[ModuleRunner/{self.name}] variable '{key}' was not in requirements.")
 
         return self.m.__run__(**dictionnary)
     
@@ -209,12 +216,11 @@ class ScriptRunner:
                 self.array_var = name
 
     def run_with_dict(self, dictionnary: dict):
-        dictionnary.update({"touchfile": f"{self.workdir}/{str(uuid.uuid1())}.ended"})
+        dictionnary.update({"touchfile": f"{self.workdir}/{randid()}.ended"})
         for name in self.generated_files:
             metavar = self._required_variables[name]
-            file = f"{self.workdir}/{name}.{str(uuid.uuid1())}.npz"
+            file = f"{self.workdir}/{name}.{randid()}.npz"
             dictionnary[metavar.name] = file
-        #print(set(self.variables) , set(dictionnary.keys()))
 
         src_dictionnary = dict()
         for name, value in dictionnary.items():
@@ -226,11 +232,11 @@ class ScriptRunner:
             else:
                 src_dictionnary[metavar.src] = value
         if self.array:
-            print("Running array job.")
+            logging.debug("Running array job.")
             touchfiles = list()
             returns = { var: [] for var in self.declares }
             for i, value in enumerate(dictionnary[self.array_var]):
-                print(f" - {value}")
+                logging.debug(f" - {value}")
                 src_dictionnary.update({"touchfile": dictionnary["touchfile"].replace(".ended", f".{i}.ended")})
                 src_dictionnary.update({self._required_variables[self.array_var].src: value})
 
@@ -238,14 +244,14 @@ class ScriptRunner:
                     metavar = self._required_variables[name]
                     src_dictionnary[metavar.src] = dictionnary[metavar.name].replace(name, f"{name}.{i}.")
                 ensure_arguments_match(self.variables, dictionnary.keys())
-                generate_job(self.content, src_dictionnary, launch=True, shell=self.shell)
+                generate_job(self.content, src_dictionnary, launch=True, shell=self.shell, name=self.path)
                 touchfiles.append(src_dictionnary["touchfile"])
                 [ returns[name].append(src_dictionnary[self._required_variables[name].src]) for name in self.declares]
             wait_files(touchfiles, sleep_time=10)
 
         else:
             ensure_arguments_match(self.variables, dictionnary.keys())
-            generate_job(self.content, src_dictionnary, launch=True, shell=self.shell)
+            generate_job(self.content, src_dictionnary, launch=True, shell=self.shell, name=self.path)
             wait_files([src_dictionnary["touchfile"]],sleep_time=10)
             returns = { var: dictionnary[var] for var in self.declares }
 
@@ -273,13 +279,28 @@ class ScriptRunner:
     @classmethod
     def from_json(cls, data):
         return cls(data["name"], data["path"], data["shell"], data["parallel"], workdir=data["workdir"])
-def generate_job(current, dictionnary, launch=False, shell="bash"):
+
+
+def generate_job(prototype, dictionnary, launch=False, shell="bash", name="./submit.sh"):
+    '''
+        Generates a runnable instance of a prototype shell script.
+        prototype: The shell script to be completed
+        dictionnary: Variables required to complete the script
+        launch: whether to write and launch the script on completion
+        shell: The shell to run the script with
+    '''
+    completed_script = copy(prototype)
     for key, value in dictionnary.items():
-        current = current.replace(f'{{{{{key}}}}}', str(value))
-    
+        completed_script = completed_script.replace(f'{{{{{key}}}}}', str(value))
+
     if launch:
+        logging.debug("Launching job")
         os.makedirs("./tmp/", exist_ok=True)
 
-        with open("./tmp/submit.now.sh", "w") as f2:
-            f2.write(current)
-        subprocess.call(f"{shell} ./tmp/submit.now.sh", shell=True)
+        script_name = os.path.basename(name).replace(".proto.", f".{randid(5)}.")
+        script_name = join(TMPDIR, script_name)
+        with open(script_name, "w") as f2:
+            f2.write(completed_script)
+        subprocess.call([shell, script_name], shell=False)
+    
+    return completed_script  

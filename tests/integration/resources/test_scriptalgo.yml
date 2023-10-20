@@ -1,6 +1,7 @@
 workdir: "./"
-algorithms:
+items:
   - name: algo
+    type: Algorithm
     actions:
       - type: script_runner
         name: run

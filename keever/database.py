@@ -103,7 +103,7 @@ class Database:
         entries = set()
         for variable in self._data.keys():
             for indiv in self._data[variable].keys():
-                entries.insert(indiv)
+                entries.add(indiv)
 
         return entries
     

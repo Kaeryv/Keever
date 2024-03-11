@@ -105,7 +105,7 @@ class Database:
             for indiv in self._data[variable].keys():
                 entries.add(indiv)
 
-        return entries
+        return list(entries)
     
     def save(self, filename):
         serialize_json(self.state_dict, filename)

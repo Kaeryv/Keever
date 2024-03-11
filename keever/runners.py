@@ -8,6 +8,7 @@ from time import sleep
 from keever.tools import randid
 import logging
 from copy import copy
+from .tools import str_rm_substrings
 
 from keever import TMPDIR
 
@@ -54,20 +55,26 @@ def load_action_list(data):
     return dict([(action["name"], load_action(action)) for action in data])
 
 def wait_files(files, sleep_time=60):
-    logging.info("Waiting for touchfiles.")
+    logging.info(f"[wait_files] There are {len(files)} touchfiles.")
+    file_present = [ False for file in files ]
     while True:
         all_files_present = True
-        for file in files:
-            all_files_present &= isfile(file)
-        if all_files_present:
+        for i, file in enumerate(files):
+            if not file_present[i]:
+                logging.debug(f"[wait_files] Looking for {file}")
+                file_present[i] = isfile(file)
+        if all(file_present):
+            logging.debug("[wait_files] All touchfiles exist")
             for file in files:
                 remove(file) 
             break
+
         sleep(sleep_time)
 
+from copy import copy
 class RunnerVariable:
     def __init__(self, src) -> None:
-        self.src = src
+        self.src = copy(src)
         self.array = False
         self.name = self.src
         if "[]" in src:
@@ -190,23 +197,29 @@ class ScriptRunner:
     @property
     def workdir(self):
         return self._workdir
+
     @workdir.setter
     def workdir(self, value):
         self._workdir = value
         os.makedirs(value, exist_ok=True)
+
     @property
     def variables(self):
         return list(self._required_variables.keys())
 
     def build_from_script(self, path: str):
+        '''
+            Reads the prototype <any> shell script.
+            There should be {{statements}} that we can interpret to define I/O
+        '''
         assert os.path.isfile(path) and path.endswith(".proto.sh")
         with open(path, "r") as f:
             self.content = f.read()
-            variables = [ r.replace("{{", "").replace("}}","") for r in  re.findall(r'\{\{.*?\}\}', self.content)]
-            variables = list(set(variables))
-            for req in variables:
-                newvar = RunnerVariable(req)
-                self._required_variables[newvar.name] = newvar
+            statements = [ str_rm_substrings(r, ["{{","}}"]) for r in  re.findall(r'\{\{.*?\}\}', self.content)]
+            statements = list(set(statements))
+            for statement in statements:
+                variable = RunnerVariable(statement)
+                self._required_variables[variable.name] = variable
         
         self.array = False
         self.array_var = None
@@ -223,10 +236,12 @@ class ScriptRunner:
             dictionnary[metavar.name] = file
 
         src_dictionnary = dict()
+        exported_filenames = list()
         for name, value in dictionnary.items():
             metavar = self._required_variables[name]
             if hasattr(value,"export"):
                 src_dictionnary[metavar.src] = value.export(metavar.type)
+                exported_filenames.append(src_dictionnary[metavar.src])
             elif isinstance(value,list) and not metavar.array:
                 src_dictionnary[metavar.src] = " ".join(map(str, value))
             else:
@@ -259,6 +274,10 @@ class ScriptRunner:
         
         for file in script_files:
             os.remove(file)
+
+        # Removing files created for export
+        for name in exported_filenames:
+            os.remove(name)
 
         return returns
 

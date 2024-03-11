@@ -40,3 +40,9 @@ def randid(length=None):
         return str(uuid.uuid1())[:length]
     else:
         return str(uuid.uuid1())
+
+def str_rm_substrings(string, substrings):
+    for ss in substrings:
+        string = string.replace(ss, "")
+    return string
+

@@ -35,6 +35,7 @@ class Database:
     def __init__(self, name="untitled", variables_descr={}, storages=[]) -> None:
         if variables_descr:
             self.variables_descr = variables_descr["params"]
+        print(variables_descr)
         self.storage_descr = storages
         self._data = { key: {} for key in storages}
         self._data.update({"variables": {}})
@@ -77,7 +78,7 @@ class Database:
         self.variables_descr = state_dict["variables"] if "variables" in state_dict else {}
         self.storage_descr   = state_dict["storages"]   if "storages"  in state_dict else []
         self.exporters = state_dict["exporters"] if "exporters" in state_dict else {}
-        self._data = { "variables": {} }
+        self._data = { variable['name']: {} for variable in self.variables_descr  }
         self._data.update({ key: {} for key in self.storage_descr })
 
         if "_data" in state_dict.keys():
@@ -86,6 +87,7 @@ class Database:
         # @TODO This should go away with variables descr
         if "populate-on-creation" in state_dict.keys() and state_dict["populate-on-creation"]:
             self.populate(state_dict["populate-on-creation"]["algo"], state_dict["populate-on-creation"]["count"])
+
         return self
 
     @classmethod
@@ -100,8 +102,8 @@ class Database:
         '''
         return list(self._data["variables"].keys())
     
-    def save(self, path):
-        serialize_json(self.state_dict, path)
+    def save(self, filename):
+        serialize_json(self.state_dict, filename)
         return self
     
     def __len__(self):
@@ -152,6 +154,28 @@ class Database:
         ''' @TODO Remove '''
         return count_continuous_variables(self.variables_descr)
 
+    @property
+    def continuous_variables_names(self):
+        names = list()
+        for i in self.continuous_variables_indices:
+            names.append(self.variables_descr[i]["name"])
+        return names
+
+    @property
+    def continuous_variables_indices(self):
+        indices = list()
+        for i, variable in enumerate(self.variables_descr):
+            if variable["type"] in ["vreal", "real"]:
+                indices.append(i)
+        return indices
+
+    @property
+    def continuous_variables_sizes(self):
+        sizes = list()
+        for i in self.continuous_variables_indices:
+            sizes.append(self.variables_descr[i]["size"])
+        return sizes
+
     def assert_empty(self):
         for key in self._data.keys():
             assert(len(self._data[key]) == 0)
@@ -164,10 +188,18 @@ class Database:
         bounds = countinuous_variables_boundaries(self.variables_descr)
         configs *= (bounds[1] - bounds[0])
         configs += bounds[0]
+
+        variables = self.continuous_variables_names
+        variables_sizes = self.continuous_variables_sizes
+        variables_positions = np.cumsum([0]+variables_sizes)
+
         for conf in configs:
             individual_name = str(uuid.uuid1())
             logging.debug(f"Adding individual {individual_name}.")
-            self.add_entry(individual_name, {"variables": conf})
+            entry = {}
+            for variable, offset, size in zip(variables, variables_positions, variables_sizes):
+                entry.update({variable: conf[offset:offset+size]})
+            self.add_entry(individual_name, entry)
         logging.info("Finished populating.")
 
         

@@ -1,0 +1,93 @@
+workdir: &workdir "./"
+
+playbook:
+  init:
+    - type: save
+      item: doe
+      args:
+        filename: 'doe-no-evaluations'
+
+    # Play an action with any arguments
+    # The return variable can be stored in the global context for later reuse
+    - type: action
+      item: fom
+      action: evaluate-dummy
+      args:
+        x: [10, 10]
+      output: result
+
+    # Logging capability
+    - type: log-info
+      msg: "Plop {}"
+      args: 
+        - "#result"
+
+    # Playing the action of an item using the 'action' type
+    # In order to refer to an item, use the @ prefix
+    - type: action
+      item: opt
+      reload: true
+      action: optimize
+      args:
+        fom: "@fom"
+        doe: "@doe"
+      output: best_fitness
+    
+    # Define a checkpoint from which to start if crash/stop occurs
+    # This can also be used to rewind
+    - type: checkpoint
+      name: post-init
+
+    - type: action
+      item: model
+      action: train
+      args:
+        db: "@doe"
+
+items:
+  - name: doe
+    type: Database
+    variables:
+      - name: r
+        type : vreal
+        lower: -0.6
+        upper: 0.5
+        size: 5
+    storages:
+      - metric
+    populate-on-creation:
+      algo: LHS
+      count: 40
+    exporters:
+      npz.all: ["metric", "r"]
+
+  - name: fom
+    type: Algorithm
+    actions:
+      - name: evaluate-dummy
+        type: module_runner
+        shell: false
+        path: examples.eval_sphere
+        workdir: *workdir
+  - name: opt
+    type: Algorithm
+    actions:
+      - name: optimize
+        type: module_runner
+        shell: false
+        path: examples.simple_pso_sko
+        workdir: *workdir
+    config:
+      fevals: 40000
+      nagents: 40
+  - name: model
+    type: Algorithm
+    actions:
+      - name: train
+        type: script_runner
+        shell: bash
+        path: run_smt.proto.sh
+        workdir: *workdir
+        parallel: false
+    config:
+      method: RBF

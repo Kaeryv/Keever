@@ -3,7 +3,7 @@ sys.path.append(".")
 
 from argparse import ArgumentParser
 parser = ArgumentParser()
-parser.add_argument("--project")
+parser.add_argument("--project", required=True)
 args = parser.parse_args()
 
 import logging
@@ -42,6 +42,6 @@ for i, action in enumerate(config["playbook"]["init"]):
         global_vars[action.output] = ret
 
 
-mm.get("doe").save("doe-no-evaluations")
-result = mm.get("fom").action("evaluate-dummy", args={"x": [10, 10]})
-best_fitness = mm.get("opt").reload().action("optimize", args={"fom": mm.get("fom"), "doe": mm.get("doe")})
+#mm.get("doe").save("doe-no-evaluations")
+#result = mm.get("fom").action("evaluate-dummy", args={"x": [10, 10]})
+#best_fitness = mm.get("opt").reload().action("optimize", args={"fom": mm.get("fom"), "doe": mm.get("doe")})

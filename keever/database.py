@@ -100,7 +100,12 @@ class Database:
             Returns the unique identifiers of all individuals
             @TODO I want to remove the 'magic and always present' variables key by something more robust.
         '''
-        return list(self._data["variables"].keys())
+        entries = set()
+        for variable in self._data.keys():
+            for indiv in self._data[variable].keys():
+                entries.insert(indiv)
+
+        return entries
     
     def save(self, filename):
         serialize_json(self.state_dict, filename)

@@ -149,6 +149,9 @@ class Database:
 
     def export(self, exporter):
         ''' Used for exporting Database keys to any file format '''
+        print(exporter)
+        assert exporter != 'object', f"Invalid database exporter: {exporter}."
+        assert exporter.count('.') == 1, "Database exporter expected 1 argument."
         export_format, export_name = exporter.split(".")
         export_filename = join(TMPDIR, f"{self.name}.dbexport.{str(uuid.uuid1())[:5]}.{export_format}")
         self.store_in_file(export_filename, export_format, self.exporters[exporter])

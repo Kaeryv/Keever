@@ -212,7 +212,8 @@ class ScriptRunner:
             Reads the prototype <any> shell script.
             There should be {{statements}} that we can interpret to define I/O
         '''
-        assert os.path.isfile(path) and path.endswith(".proto.sh")
+        assert (os.path.isfile(path) and path.endswith(".proto.sh")),\
+                f"Prototype {path} required does not exist."
         with open(path, "r") as f:
             self.content = f.read()
             statements = [ str_rm_substrings(r, ["{{","}}"]) for r in  re.findall(r'\{\{.*?\}\}', self.content)]
@@ -229,6 +230,7 @@ class ScriptRunner:
                 self.array_var = name
 
     def run_with_dict(self, dictionnary: dict):
+        assert "touchfile" in self._required_variables, f"Set touchfile in {self.path}"
         dictionnary.update({"touchfile": f"{self.workdir}/{randid()}.ended"})
         for name in self.generated_files:
             metavar = self._required_variables[name]
@@ -238,6 +240,9 @@ class ScriptRunner:
         src_dictionnary = dict()
         exported_filenames = list()
         for name, value in dictionnary.items():
+            if not name in self._required_variables:
+                logging.warn(f"Unused variable {name}")
+                continue
             metavar = self._required_variables[name]
             if hasattr(value,"export"):
                 src_dictionnary[metavar.src] = value.export(metavar.type)

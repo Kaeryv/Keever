@@ -29,6 +29,7 @@ def var(x):
 
 for i, action in enumerate(config["playbook"]["init"]):
     action = SimpleNamespace(**action)
+    logging.info(f"Playing {action=}")
     if action.type == "save":
         ret = mm.get(action.item).save(**action.args)
     elif action.type == "action":

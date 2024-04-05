@@ -86,7 +86,7 @@ items:
       - name: train
         type: script_runner
         shell: bash
-        path: run_smt.proto.sh
+        path: examples/run_smt.proto.sh
         workdir: *workdir
         parallel: false
     config:

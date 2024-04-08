@@ -11,9 +11,9 @@ import logging
 
 def count_continuous_variables(variables_description):
     count = 0
-    for var in variables_description:
+    for i, var in enumerate(variables_description):
         if "size" in var.keys():
-            count += var["size"]
+            count +=self.variable_size(i) 
         else:
             count += 1
     return int(count)
@@ -157,6 +157,13 @@ class Database:
         self.store_in_file(export_filename, export_format, self.exporters[exporter])
         return export_filename
 
+    def variable_size(self, index):
+        size = self.variables_descr[index]["size"]
+        if isinstance(self.variables_descr[index]["size"], list):
+            size = prod(size)
+        return size
+
+
     @property
     def num_scalar_variables(self):
         ''' @TODO Remove '''
@@ -181,7 +188,7 @@ class Database:
     def continuous_variables_sizes(self):
         sizes = list()
         for i in self.continuous_variables_indices:
-            sizes.append(self.variables_descr[i]["size"])
+            sizes.append(self.variable_size(i))
         return sizes
 
     def assert_empty(self):

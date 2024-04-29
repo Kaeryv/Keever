@@ -13,7 +13,7 @@ def count_continuous_variables(variables_description):
     count = 0
     for i, var in enumerate(variables_description):
         if "size" in var.keys():
-            count +=self.variable_size(i) 
+            count += var['size']
         else:
             count += 1
     return int(count)

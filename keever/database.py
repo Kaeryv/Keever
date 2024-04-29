@@ -107,9 +107,6 @@ class Database:
 
         return list(entries)
     
-    def save(self, filename):
-        serialize_json(self.state_dict, filename)
-        return self
     
     def __len__(self):
         ''' Returns the number of individuals in the database '''
@@ -227,5 +224,14 @@ class Database:
         for i in range(num):
             individual_name = str(uuid.uuid1())
             self.add_entry(individual_name, { key: d[key][i] for key in keys})
+
+    def serialize(self, method, filepath=None):
+        if filepath is None:
+            filepath = join(self.workdir, self.name + ".json")
+        if method == "json":
+            serialize_json(self.state_dict, filepath)
+        else:
+            logging.error(f"Unknown serializer {method}.")
+        return filepath
 
 

@@ -10,6 +10,7 @@ import logging
 from keever.algorithm import ModelManager
 import yaml
 from types import SimpleNamespace
+import numpy as np
 
 config = yaml.safe_load(open(args.project, "r"))
 mm = ModelManager()
@@ -30,8 +31,13 @@ def var(x):
 for i, action in enumerate(config["playbook"]["init"]):
     action = SimpleNamespace(**action)
     logging.info(f"Playing {action=}")
-    if action.type == "save":
-        ret = mm.get(action.item).save(**action.args)
+    if action.type == "serialize":
+        ret = mm.get(action.item).serialize(**action.args)
+    elif action.type == "dump_npz":
+        filepath = action.directory + "/" + action.filename
+        saved_dict = { e: global_vars[e] for e in action.args }
+        np.savez_compressed(filepath, **saved_dict)
+        ret = filepath
     elif action.type == "action":
         ret = mm.get(action.item).action(action.action, args={ key: var(value) for key, value in action.args.items()})
     elif action.type == "log-info":
@@ -40,7 +46,11 @@ for i, action in enumerate(config["playbook"]["init"]):
         logging.error(f"Unknown Action {action.type}")
 
     if hasattr(action, "output"):
-        global_vars[action.output] = ret
+        if isinstance(action.output, list):
+            for key, value in zip(action.output, ret):
+                global_vars[key] = value
+        else:
+            global_vars[action.output] = ret
 
 
 #mm.get("doe").save("doe-no-evaluations")

@@ -27,6 +27,7 @@ class ModelManager:
         return self.items[obj.name]
 
     def get(self, key):
+        assert key in self.items
         return self.items[key]
     
     @property    
@@ -84,10 +85,12 @@ class Algorithm():
         obj.config = data["config"] if "config" in data else {}
         return obj
 
-    def export(self, type):
-        filepath = join(self.workdir, self.name + ".json")
-        if type == "serialize":
-            with open(filepath, "w") as f:
-                json.dump(self.state_dict, f)
+    def serialize(self, method, filepath=None):
+        if filepath is None:
+            filepath = join(self.workdir, self.name + ".json")
+        if method == "json":
+            serialize_json(self.state_dict, filepath)
+        else:
+            logging.error(f"Unknown serializer {method}.")
             
         return filepath

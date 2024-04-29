@@ -9,13 +9,14 @@ from os.path import join
 
 import logging
 
+def variable_size(variable):
+    size = variable["size"] if "size" in variable else 1
+    size = prod(size) if isinstance(size, list) else size
+    return size
 def count_continuous_variables(variables_description):
     count = 0
-    for i, var in enumerate(variables_description):
-        if "size" in var.keys():
-            count += var['size']
-        else:
-            count += 1
+    for var in variables_description:
+        count += variable_size(var)
     return int(count)
 
 def countinuous_variables_boundaries(variables_description):
@@ -154,13 +155,6 @@ class Database:
         self.store_in_file(export_filename, export_format, self.exporters[exporter])
         return export_filename
 
-    def variable_size(self, index):
-        size = self.variables_descr[index]["size"]
-        if isinstance(self.variables_descr[index]["size"], list):
-            size = prod(size)
-        return size
-
-
     @property
     def num_scalar_variables(self):
         ''' @TODO Remove '''
@@ -185,7 +179,7 @@ class Database:
     def continuous_variables_sizes(self):
         sizes = list()
         for i in self.continuous_variables_indices:
-            sizes.append(self.variable_size(i))
+            sizes.append(variable_size(self.variables_descr[i]))
         return sizes
 
     def assert_empty(self):

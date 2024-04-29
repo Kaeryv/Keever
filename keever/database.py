@@ -25,7 +25,7 @@ def countinuous_variables_boundaries(variables_description):
     bounds = np.zeros((2, varcount))
     cur = 0
     for i, var in enumerate(variables_description):
-        lc = var["size"] if "size" in var else 1
+        lc = variable_size(var)
         bounds[0, cur:cur+lc] = var["lower"]
         bounds[1, cur:cur+lc] = var["upper"]
         cur += lc

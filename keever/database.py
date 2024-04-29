@@ -6,6 +6,7 @@ from keever.tools import serialize_json
 from copy import copy
 from keever import TMPDIR 
 from os.path import join
+from math import prod
 
 import logging
 

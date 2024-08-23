@@ -10,6 +10,18 @@ from math import prod
 
 import logging
 
+variable_types = {
+    "real":   {"continuous": True,  "discrete": True, "ordered": True},
+    "vreal":  {"continuous": True,  "discrete": True, "ordered": True},
+    "categ":  {"continuous": False, "discrete": True, "ordered": False},
+    "vcateg": {"continuous": False, "discrete": True, "ordered": False},
+}
+
+def variable_is(var, target_property):
+    if not var["type"] in variable_types:
+        logging.error(f"[variable_is/database.py] Unknown variable type {var['type']}.")
+    return variable_types[var["type"]][target_property]
+
 def variable_size(variable):
     size = variable["size"] if "size" in variable else 1
     size = prod(size) if isinstance(size, list) else size
@@ -17,19 +29,38 @@ def variable_size(variable):
 def count_continuous_variables(variables_description):
     count = 0
     for var in variables_description:
-        count += variable_size(var)
+        if variable_is(var, "continuous"):
+            count += variable_size(var)
     return int(count)
 
+def count_categorical_variables(variables_description):
+    count = 0
+    for var in variables_description:
+        if variable_is(var, "discrete") and not variable_is(var, "ordered"):
+            count += variable_size(var)
+    return int(count)
 def countinuous_variables_boundaries(variables_description):
     varcount = count_continuous_variables(variables_description)
     bounds = np.zeros((2, varcount))
     cur = 0
     for i, var in enumerate(variables_description):
-        lc = variable_size(var)
-        bounds[0, cur:cur+lc] = var["lower"]
-        bounds[1, cur:cur+lc] = var["upper"]
-        cur += lc
+        if variable_is(var, "continuous"):
+            lc = variable_size(var)
+            bounds[0, cur:cur+lc] = var["lower"]
+            bounds[1, cur:cur+lc] = var["upper"]
+            cur += lc
     return bounds
+
+def categorical_variables_num_values(variables_description):
+    varcount = count_categorical_variables(variables_description)
+    count = np.zeros((varcount), dtype=int)
+    cur = 0
+    for i, var in enumerate(variables_description):
+        if variable_is(var, "discrete") and not variable_is(var, "ordered"):
+            lc = variable_size(var)
+            count[cur:cur+lc] = var["count"]
+            cur += lc
+    return count
 
 
 
@@ -128,7 +159,7 @@ class Database:
 
     def update_entry(self, name, dictionnary):
         for key in dictionnary.keys():
-            assert(key in self.storage_descr, f"Key {key} is not allowed in storage.")
+            assert key in self.storage_descr, f"Key {key} is not allowed in storage."
             self._data[key][name] = dictionnary[key]
 
     def update_entries(self, entries, dictionnary):

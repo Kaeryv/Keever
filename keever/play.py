@@ -21,10 +21,13 @@ logging.getLogger().setLevel(logging.INFO)
 
 
 def var(x):
-    if list(x)[0] == '@':
-        return mm.get(x.replace("@",""))
-    elif list(x)[0] == '#':
-        return global_vars[x.replace("#","")]
+    if isinstance(x, str):
+        if list(x)[0] == '@':
+            return mm.get(x.replace("@",""))
+        elif list(x)[0] == '#':
+            return global_vars[x.replace("#","")]
+        else:
+            return x
     else:
         return x
 

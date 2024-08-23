@@ -25,6 +25,12 @@ items:
         lower: -0.5
         upper: 0.5
         size: 5
+      - name: variant
+        type: categ
+        count: 3
+      - name: variant2
+        type: categ
+        count: 9
     storages:
       - metric
     populate-on-creation:
@@ -38,13 +44,15 @@ items:
         shell: false
         path: examples.eval_sphere
         workdir: *workdir
+    config:
+      categ: 2
   - name: opt
     type: Algorithm
     actions:
       - name: optimize
         type: module_runner
         shell: false
-        path: examples.simple_pso_sko
+        path: examples.simple_pso_hybris
         workdir: *workdir
     config:
       fevals: 40000

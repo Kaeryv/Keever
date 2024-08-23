@@ -1,7 +1,6 @@
 import uuid
 import numpy as np
 from scipy.stats.qmc import LatinHypercube
-import os
 from keever.tools import serialize_json
 from copy import copy
 from keever import TMPDIR 
@@ -18,7 +17,7 @@ variable_types = {
 }
 
 def variable_is(var, target_property):
-    if not var["type"] in variable_types:
+    if var["type"] not in variable_types:
         logging.error(f"[variable_is/database.py] Unknown variable type {var['type']}.")
     return variable_types[var["type"]][target_property]
 

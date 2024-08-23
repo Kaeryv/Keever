@@ -58,7 +58,6 @@ def wait_files(files, sleep_time=60):
     logging.info(f"[wait_files] There are {len(files)} touchfiles.")
     file_present = [ False for file in files ]
     while True:
-        all_files_present = True
         for i, file in enumerate(files):
             if not file_present[i]:
                 logging.debug(f"[wait_files] Looking for {file}")
@@ -71,7 +70,6 @@ def wait_files(files, sleep_time=60):
 
         sleep(sleep_time)
 
-from copy import copy
 class RunnerVariable:
     def __init__(self, src) -> None:
         self.src = copy(src)
@@ -104,7 +102,6 @@ def load_module(module):
 
     return __import__(module_path, fromlist=[module])
 
-from copy import copy
 class SequenceRunner:
     def __init__(self, name, actions=[]) -> None:
         self.actions = actions
@@ -158,7 +155,7 @@ class ModuleRunner():
 
     def run_with_dict(self, dictionnary: dict):
         for key in dictionnary.keys():
-            if not key in self._required_variables:
+            if key not in self._required_variables:
                 logging.warning(f"[ModuleRunner/{self.name}] variable '{key}' was not in requirements.")
 
         return self.m.__run__(**dictionnary)
@@ -240,7 +237,7 @@ class ScriptRunner:
         src_dictionnary = dict()
         exported_filenames = list()
         for name, value in dictionnary.items():
-            if not name in self._required_variables:
+            if name not in self._required_variables:
                 logging.warn(f"Unused variable {name}")
                 continue
             metavar = self._required_variables[name]

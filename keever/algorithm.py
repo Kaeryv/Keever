@@ -14,11 +14,14 @@ class ModelManager:
 
     def load_state_dict(self, state_dict):
         self._workdir = state_dict["workdir"] if "workdir" in state_dict.keys() else "."
-        for e in state_dict["items"]:
-            if e["type"] == "Database":
-                self.add(Database.from_json(e))
-            elif e["type"] == "Algorithm":
-                self.add(Algorithm.from_json(e))
+        if "items" in state_dict:
+            for e in state_dict["items"]:
+                if e["type"] == "Database":
+                    self.add(Database.from_json(e))
+                elif e["type"] == "Algorithm":
+                    self.add(Algorithm.from_json(e))
+        else:
+            logging.warning("There are no items in the playbook.")
 
     def add(self, obj):
         self.items[obj.name] = obj
@@ -27,7 +30,7 @@ class ModelManager:
         return self.items[obj.name]
 
     def get(self, key):
-        assert key in self.items
+        assert key in self.items, f"Key [{key}] is not in the book's item list."
         return self.items[key]
     
     @property    

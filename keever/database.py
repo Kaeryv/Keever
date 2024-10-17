@@ -67,7 +67,6 @@ class Database:
     def __init__(self, name="untitled", variables_descr={}, storages=[]) -> None:
         if variables_descr:
             self.variables_descr = variables_descr["params"]
-        print(variables_descr)
         self.storage_descr = storages
         self._data = { key: {} for key in storages}
         self._data.update({"variables": {}})

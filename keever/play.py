@@ -5,8 +5,14 @@ from argparse import ArgumentParser
 parser = ArgumentParser()
 parser.add_argument("--project", required=True)
 parser.add_argument("--logfile", default="keever.log")
+parser.add_argument("--loglevel", default=0)
 args = parser.parse_args()
-
+loglevels = {
+        "info": logging.INFO,
+        "debug": logging.DEBUG,
+        "error": logging.ERROR,
+        }
+loglevel = loglevels[args.loglevel]
 from keever.algorithm import ModelManager
 from .tools import export_item
 import yaml
@@ -20,15 +26,12 @@ if os.path.isfile(args.logfile):
     os.remove(args.logfile)
 fh = logging.FileHandler(args.logfile)
 sh = logging.StreamHandler()
-fh.setLevel(logging.DEBUG)
-sh.setLevel(logging.DEBUG)
+fh.setLevel(loglevel)
+sh.setLevel(loglevel)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=loglevel,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        fh,
-        sh
-    ]
+    handlers=[ fh, sh ]
 )
 
 

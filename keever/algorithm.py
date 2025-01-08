@@ -25,8 +25,8 @@ class ModelManager:
 
     def add(self, obj):
         self.items[obj.name] = obj
-        if hasattr(obj, "workdir"):
-            obj.workdir = self._workdir
+        #if hasattr(obj, "workdir"):
+        #    obj.workdir = self._workdir
         return self.items[obj.name]
 
     def get(self, key):
@@ -50,6 +50,7 @@ class Algorithm():
     config:  dict = field(init=False, default=Factory(dict))
     _workdir: str = field(init=False, default=".")
     name:     str = field(init=True)
+    exportable: bool = True
 
     def __repr__(self) -> str:
         return f"Algorithm {self.name} with {len(self.actions)} actions."
@@ -83,17 +84,7 @@ class Algorithm():
     @classmethod
     def from_json(cls, data):
         obj = cls(data["name"])
-        obj._workdir = data["workdir"] if "workdir" in data.keys() else None
+        obj.workdir = data["workdir"] if "workdir" in data.keys() else None
         obj.actions.update(load_action_list(data["actions"]))
         obj.config = data["config"] if "config" in data else {}
         return obj
-
-    def serialize(self, method, filepath=None):
-        if filepath is None:
-            filepath = join(self.workdir, self.name + ".json")
-        if method == "json":
-            serialize_json(self.state_dict, filepath)
-        else:
-            logging.error(f"Unknown serializer {method}.")
-            
-        return filepath

@@ -19,6 +19,7 @@ sys.path.append("./user/")
 import json
 import numpy as np
 
+
 def load(path):
     with open(path, "r") as f:
         return json.load(f)

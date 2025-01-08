@@ -72,6 +72,7 @@ class Database:
         self._data.update({"variables": {}})
         self.exporters = {}
         self.name = name
+        self.exportable = True
 
     def __iter__(self):
         class DatabaseIterator:
@@ -168,22 +169,12 @@ class Database:
     def __getitem__(self, key):
         return { k: self._data[k][key] for k in self._data.keys() if key in self._data[k] }
     
-    def store_in_file(self, path, method, keys):
+    def export_data(self, exporter):
+        path = join(TMPDIR, f"{self.name}.dbexport.{str(uuid.uuid1())[:5]}.npz")
+        keys = self.exporters[exporter]["keys"]
         payload = { key: np.asarray([ self._data[key][entity] for entity in self._data[key].keys() ]) for key in keys }
-        if method == "npz":
-            np.savez_compressed(path, **payload)
-        else:
-            logging.error("Unsupported export format")
-
-    def export(self, exporter):
-        ''' Used for exporting Database keys to any file format '''
-        print(exporter)
-        assert exporter != 'object', f"Invalid database exporter: {exporter}."
-        assert exporter.count('.') == 1, "Database exporter expected 1 argument."
-        export_format, export_name = exporter.split(".")
-        export_filename = join(TMPDIR, f"{self.name}.dbexport.{str(uuid.uuid1())[:5]}.{export_format}")
-        self.store_in_file(export_filename, export_format, self.exporters[exporter])
-        return export_filename
+        np.savez_compressed(path, **payload)
+        return path
 
     @property
     def num_scalar_variables(self):
@@ -248,14 +239,5 @@ class Database:
         for i in range(num):
             individual_name = str(uuid.uuid1())
             self.add_entry(individual_name, { key: d[key][i] for key in keys})
-
-    def serialize(self, method, filepath=None):
-        if filepath is None:
-            filepath = join(self.workdir, self.name + ".json")
-        if method == "json":
-            serialize_json(self.state_dict, filepath)
-        else:
-            logging.error(f"Unknown serializer {method}.")
-        return filepath
 
 

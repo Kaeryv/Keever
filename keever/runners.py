@@ -8,7 +8,7 @@ from time import sleep
 from keever.tools import randid
 import logging
 from copy import copy
-from .tools import str_rm_substrings
+from .tools import str_rm_substrings, export_item
 
 from keever import TMPDIR
 
@@ -37,22 +37,6 @@ def ensure_arguments_match(required, provided):
             logging.warning(f" - {e}")
 
 
-action_types = ["module_runner", "script_runner", "sequence_runner"]
-def load_action(data):
-    at = data["type"]
-    assert(at in action_types)
-    if at == "module_runner":
-        return ModuleRunner.from_json(data)
-    elif at == "script_runner":
-        return ScriptRunner.from_json(data)
-    elif at == "sequence_runner":
-        return SequenceRunner.from_json(data)
-    else:
-        print(f"Unknown runner type: {at}.")
-        exit()
-
-def load_action_list(data):
-    return dict([(action["name"], load_action(action)) for action in data])
 
 def wait_files(files, sleep_time=60):
     logging.info(f"[wait_files] There are {len(files)} touchfiles.")
@@ -103,10 +87,11 @@ def load_module(module):
     return __import__(module_path, fromlist=[module])
 
 class SequenceRunner:
-    def __init__(self, name, actions=[]) -> None:
+    def __init__(self, name, actions=[], workdir=".") -> None:
         self.actions = actions
         self.global_variables = []
         self.name = name
+        self.workdir = workdir 
 
     @property
     def state_dict(self):
@@ -174,7 +159,8 @@ class ModuleRunner():
 
     @classmethod
     def from_json(cls, data):
-        return cls(data["name"], data["path"], workdir=data["workdir"])
+        wd = data["workdir"] if "workdir" in data else "." 
+        return cls(data["name"], data["path"], workdir=wd)
 
     @property
     def variables(self):
@@ -182,6 +168,7 @@ class ModuleRunner():
 
 class ScriptRunner:
     def __init__(self, name, path, shell="bash", parallel=False, workdir=".") -> None:
+        logging.debug(f"Instanciating ScriptRunner from {workdir}")
         self.path = path
         self.shell = shell
         self.content = ""
@@ -209,6 +196,7 @@ class ScriptRunner:
             Reads the prototype <any> shell script.
             There should be {{statements}} that we can interpret to define I/O
         '''
+        logging.debug(f"Building script from template {path}")
         assert (os.path.isfile(path) and path.endswith(".proto.sh")),\
                 f"Prototype {path} required does not exist."
         with open(path, "r") as f:
@@ -227,22 +215,26 @@ class ScriptRunner:
                 self.array_var = name
 
     def run_with_dict(self, dictionnary: dict):
+        logging.debug(f"Running script.")
         assert "touchfile" in self._required_variables, f"Set touchfile in {self.path}"
         dictionnary.update({"touchfile": f"{self.workdir}/{randid()}.ended"})
         for name in self.generated_files:
             metavar = self._required_variables[name]
             file = f"{self.workdir}/{name}.{randid()}.npz"
             dictionnary[metavar.name] = file
+            logging.debug(f"Preparing output file [{file}]")
 
         src_dictionnary = dict()
         exported_filenames = list()
         for name, value in dictionnary.items():
+            logging.debug(f"Variable {name} is {value}")
             if name not in self._required_variables:
                 logging.warn(f"Unused variable {name}")
                 continue
             metavar = self._required_variables[name]
-            if hasattr(value,"export"):
-                src_dictionnary[metavar.src] = value.export(metavar.type)
+            if hasattr(value,"exportable") and value.exportable == True:
+                logging.debug(f"Exporting {name}.type={metavar.type}")
+                src_dictionnary[metavar.src] = export_item(value, metavar.type)
                 exported_filenames.append(src_dictionnary[metavar.src])
             elif isinstance(value,list) and not metavar.array:
                 src_dictionnary[metavar.src] = " ".join(map(str, value))
@@ -261,7 +253,7 @@ class ScriptRunner:
 
                 for name in self.generated_files:
                     metavar = self._required_variables[name]
-                    src_dictionnary[metavar.src] = dictionnary[metavar.name].replace(name, f"{name}.{i}.")
+                    src_dictionnary[metavar.src] = dictionnary[metavar.name].replace(name + ".", f"{name}.{i}.")
                 ensure_arguments_match(self.variables, dictionnary.keys())
                 script_files.append(generate_job(self.content, src_dictionnary, launch=True, shell=self.shell, name=self.path))
                 touchfiles.append(src_dictionnary["touchfile"])
@@ -304,7 +296,8 @@ class ScriptRunner:
 
     @classmethod
     def from_json(cls, data):
-        return cls(data["name"], data["path"], data["shell"], data["parallel"], workdir=data["workdir"])
+        wd = data["workdir"] if "workdir" in data else "." 
+        return cls(data["name"], data["path"], data["shell"], data["parallel"], workdir=wd)
 
 
 def generate_job(prototype, dictionnary, launch=False, shell="bash", name="./submit.sh"):
@@ -332,3 +325,16 @@ def generate_job(prototype, dictionnary, launch=False, shell="bash", name="./sub
         return script_name
     else:
         return completed_script  
+
+
+
+
+action_types = { "module_runner": ModuleRunner, "script_runner": ScriptRunner , "sequence_runner": SequenceRunner }
+def load_action(data):
+    at = data["type"].strip()
+    logging.debug(f"Loading action {at}.")
+    assert at in action_types, f"Unknown type of action in action list: {at}"
+    return action_types[at].from_json(data)
+
+def load_action_list(data):
+    return dict([(action["name"], load_action(action)) for action in data])

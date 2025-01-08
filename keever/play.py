@@ -8,11 +8,12 @@ parser.add_argument("--logfile", default="keever.log")
 args = parser.parse_args()
 
 from keever.algorithm import ModelManager
+from .tools import export_item
 import yaml
 from types import SimpleNamespace
 import numpy as np
 
-
+from os.path import join
 import logging
 import os
 if os.path.isfile(args.logfile):
@@ -20,7 +21,7 @@ if os.path.isfile(args.logfile):
 fh = logging.FileHandler(args.logfile)
 sh = logging.StreamHandler()
 fh.setLevel(logging.DEBUG)
-sh.setLevel(logging.WARN)
+sh.setLevel(logging.DEBUG)
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -39,7 +40,7 @@ global_vars = SimpleNamespace()
 state = global_vars.state = SimpleNamespace(running=True, iterations=0)
 
 
-logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(logging.DEBUG)
 
 
 def varpath(root, path):
@@ -69,7 +70,7 @@ def play_action(action):
     global state
     logging.debug(f"Playing {action=}")
     if action.type == "serialize":
-        ret = mm.get(action.item).serialize("json", action.filename)
+        ret = export_item(mm.get(action.item), "object.json", action.filename)
     elif action.type == "dump_npz":
         filepath = action.directory + "/" + action.filename
         saved_dict = { e: global_vars.__dict__[e] for e in action.args }
@@ -81,6 +82,8 @@ def play_action(action):
         logging.info(action.msg.format(*[var(x) for x in action.args]))
     elif action.type == "update-entries":
         mm.get(action.item).update_entries(action.tags, {key: var(value) for key, value in action.values.items() })
+    elif action.type == "add-entries-npz":
+        mm.get(action.item).append_npz_keys(**{ key: var(value) for key, value in action.args.items()})
     elif action.type == "clear":
         mm.get(action.item).clear()
     elif action.type == "merge":
